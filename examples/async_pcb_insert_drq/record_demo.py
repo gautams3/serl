@@ -59,7 +59,18 @@ if __name__ == "__main__":
             obs, _ = env.reset()
 
     uuid = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    file_name = f"./bc_demos/pcb_insert_{success_needed}_demos_{uuid}.pkl"
-    with open(file_name, "wb") as f:
-        pkl.dump(transitions, f)
-        print(f"saved {success_needed} demos to {file_name}")
+    file_name = f"./pcb_insert_{success_needed}_demos_{uuid}.pkl"
+    try:
+        with open(file_name, "wb") as f:
+            pkl.dump(transitions, f)
+            print(f"saved {success_needed} demos to {file_name}")
+    except Exception as e:
+        print(f"failed to save demos to {file_name}")
+        print(e)
+        f_temp = f"/tmp/recovered_serl_demos_{uuid}.pkl"
+        print(f"attempting to save to {f_temp} instead...")
+        pkl.dump(transitions, f_temp)
+        print(f"successfully saved to {f_temp}. PLEASE MOVE TO A SAFE LOCATION!")
+
+    env.close()
+    pbar.close()
