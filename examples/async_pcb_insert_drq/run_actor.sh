@@ -12,7 +12,7 @@ python async_drq_randomized.py "$@" \
     --batch_size 256 \
     --eval_period 2000 \
     --encoder_type resnet-pretrained \
-    --demo_path pcb_insert_20_demos_2023-12-27_19-40-50.pkl \
-    --checkpoint_path /home/undergrad/code/serl_dev/examples/async_pcb_insert_drq/5x5_20degs_20demos_rand_pcb_insert_096 \
-    --eval_checkpoint_step 20000 \
+    --demo_path pcb_insert_40_demos_2024-02-05_19-30-53_randomized.pkl \
+    --checkpoint_path /home/${USER}/serl/examples/async_pcb_insert_drq/5x5_20degs_20demos_rand_pcb_insert_096_randomized \
+    --eval_checkpoint_step 7000 \
     --eval_n_trajs 100
