@@ -224,7 +224,7 @@ class FrankaEnv(gym.Env):
         if np.all(delta < self._REWARD_THRESHOLD):
             return True
         else:
-            # print(f'Goal not reached, the difference is {delta}, the desired threshold is {_REWARD_THRESHOLD}')
+            # print(f'Goal not reached, the difference is {delta}, the desired threshold is {self._REWARD_THRESHOLD}')
             return False
 
     def crop_image(self, name, image) -> np.ndarray:
