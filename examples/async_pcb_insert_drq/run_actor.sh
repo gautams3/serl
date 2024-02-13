@@ -1,5 +1,9 @@
-export XLA_PYTHON_CLIENT_PREALLOCATE=false && \
-export XLA_PYTHON_CLIENT_MEM_FRACTION=.1 && \
+export XLA_PYTHON_CLIENT_PREALLOCATE=false
+export XLA_PYTHON_CLIENT_MEM_FRACTION=.1
+
+DEMOFILE=pcb_insert_40_demos_twograsps_2024-02-09_17-40-00
+now=$(date +%m.%d.%H.%M)
+
 python async_drq_randomized.py "$@" \
     --actor \
     --render \
@@ -12,7 +16,7 @@ python async_drq_randomized.py "$@" \
     --batch_size 256 \
     --eval_period 2000 \
     --encoder_type resnet-pretrained \
-    --demo_path pcb_insert_40_demos_2024-02-05_19-30-53_randomized.pkl \
-    --checkpoint_path /home/${USER}/serl/examples/async_pcb_insert_drq/5x5_20degs_20demos_rand_pcb_insert_096_randomized \
-    --eval_checkpoint_step 7000 \
-    --eval_n_trajs 100
+    --demo_path ${DEMOFILE}.pkl \
+    # --checkpoint_path /home/${USER}/serl/examples/async_pcb_insert_drq/${DEMOFILE} \
+    # --eval_checkpoint_step 11000 \
+    # --eval_n_trajs 100

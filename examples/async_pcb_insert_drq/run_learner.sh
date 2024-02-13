@@ -1,5 +1,9 @@
-export XLA_PYTHON_CLIENT_PREALLOCATE=false && \
-export XLA_PYTHON_CLIENT_MEM_FRACTION=.2 && \
+export XLA_PYTHON_CLIENT_PREALLOCATE=false
+export XLA_PYTHON_CLIENT_MEM_FRACTION=.2
+
+DEMOFILE=pcb_insert_40_demos_twograsps_2024-02-09_17-40-00.pkl
+now=$(date +%m.%d.%H.%M)
+
 python async_drq_randomized.py "$@" \
     --learner \
     --env FrankaPCBInsert-Vision-v0 \
@@ -11,6 +15,6 @@ python async_drq_randomized.py "$@" \
     --batch_size 256 \
     --eval_period 2000 \
     --encoder_type resnet-pretrained \
-    --demo_path pcb_insert_40_demos_2024-02-05_19-30-53_randomized.pkl \
+    --demo_path ${DEMOFILE} \
     --checkpoint_period 1000 \
-    --checkpoint_path /home/${USER}/serl/examples/async_pcb_insert_drq/5x5_20degs_20demos_rand_pcb_insert_096_randomized \
+    --checkpoint_path /home/${USER}/serl/examples/async_pcb_insert_drq/pcb_insert_${now} \
