@@ -31,7 +31,8 @@ if __name__ == "__main__":
 
     transitions = []
     success_count = 0
-    success_needed = 40
+    success_needed = 20
+    total_count = 0
     pbar = tqdm(total=success_needed)
 
     while success_count < success_needed:
@@ -53,8 +54,9 @@ if __name__ == "__main__":
         obs = next_obs
 
         if done:
-            print(rew)
             success_count += rew
+            total_count += 1
+            print(f'{rew}\tGot {success_count} successes of {total_count} trials. {success_needed} successes needed.')
             pbar.update(rew)
             obs, _ = env.reset()
 
