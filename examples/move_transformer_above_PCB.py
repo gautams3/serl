@@ -97,17 +97,21 @@ time.sleep(2) # wait for gripper to close (slower than gripper open)
 print('waiting before final move')
 time.sleep(2)
 
-response = input('Kill old controller first. Then start roscore and press enter here')
+response = input('Kill old controller first. Then start roscore and press enter')
 if response == 'q':
     print('Exiting...')
     exit()
 
+above_pick_q = [0.1756412070337813, 0.03122043978383666, -0.3287547466964052, -2.8399477963528117, 0.06180817775113116, 2.855340080923504, 0.5120437213759724]
 print('Setting joint goal...')
-setJointGoal = "rosparam set /target_joint_positions '[0.19097669621114738, 0.6011634117511281, -0.30170746777767066, -1.8931544224643337, 0.26372237982352575, 2.5055904395050472, 0.5184927675111416]' #ABOVE_TARGET_Q"
+above_target_q = [0.19097669621114738, 0.6011634117511281, -0.30170746777767066, -1.8931544224643337, 0.26372237982352575, 2.5055904395050472, 0.5184927675111416]
+setJointGoal = f"rosparam set /target_joint_positions '{above_target_q}' #ABOVE_TARGET_Q"
 os.system(setJointGoal)
 
-print('Starting joint controller...')
+print('Starting joint controller. Make sure to send SIGINT after the joint goal is reached. Press enter')
 sendGoal = "roslaunch serl_franka_controllers joint.launch robot_ip:=192.170.10.4 load_gripper:=true"
 os.system(sendGoal)
+
+print('Now start the other controller and press enter')
 
 print('Done!')

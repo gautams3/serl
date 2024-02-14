@@ -37,6 +37,9 @@ class Timer:
         self.times[key] += time.time() - self.start_times[key]
         del self.start_times[key]
 
+    def is_ticking(self, key):
+        return key in self.start_times
+
     def context(self, key):
         """
         Use this like:
