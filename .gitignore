@@ -173,5 +173,5 @@ _METADATA
 checkpoint
 wandb/
 
-# Jupyter Notebook
-*.ipynb
+# Files meant to be local (not pushed to github)
+local/
