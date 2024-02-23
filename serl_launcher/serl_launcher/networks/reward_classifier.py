@@ -69,7 +69,8 @@ def create_classifier(
     print(
         f"Loaded {param_count/1e6}M parameters from ResNet-10 pretrained on ImageNet-1K"
     )
-    new_params = classifier.params.unfreeze()
+    # new_params = classifier.params.unfreeze()
+    new_params = classifier.params
     for image_key in image_keys:
         if "pretrained_encoder" in new_params["encoder_def"][f"encoder_{image_key}"]:
             for k in new_params["encoder_def"][f"encoder_{image_key}"][
@@ -80,9 +81,9 @@ def create_classifier(
                         "pretrained_encoder"
                     ][k] = encoder_params[k]
                     print(f"replaced {k} in encoder_{image_key}")
-    from flax.core.frozen_dict import freeze
+    # from flax.core.frozen_dict import freeze
 
-    new_params = freeze(new_params)
+    # new_params = freeze(new_params)
     classifier = classifier.replace(params=new_params)
     return classifier
 
@@ -92,6 +93,7 @@ def load_classifier_func(
     sample: Dict,
     image_keys: List[str],
     checkpoint_path: str,
+    step: int = 100,
 ) -> Callable[[Dict], jnp.ndarray]:
     """
     Return: a function that takes in an observation
@@ -101,7 +103,7 @@ def load_classifier_func(
     classifier = checkpoints.restore_checkpoint(
         checkpoint_path,
         target=classifier,
-        step=100,
+        step=step,
     )
     func = lambda obs: classifier.apply_fn(
         {"params": classifier.params}, obs, train=False
