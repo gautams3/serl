@@ -33,6 +33,7 @@ from franka_env.envs.wrappers import (
     GripperCloseEnv,
     SpacemouseIntervention,
     Quat2EulerWrapper,
+    BinaryRewardClassifierWrapper,
 )
 
 import franka_env
@@ -68,6 +69,9 @@ flags.DEFINE_string("encoder_type", "resnet-pretrained", "Encoder type.")
 flags.DEFINE_string("demo_path", None, "Path to the demo data.")
 flags.DEFINE_integer("checkpoint_period", 0, "Period to save checkpoints.")
 flags.DEFINE_string("checkpoint_path", None, "Path to save checkpoints.")
+flags.DEFINE_string(
+    "reward_classifier_ckpt_path", None, "Path to reward classifier ckpt."
+)
 
 flags.DEFINE_integer(
     "eval_checkpoint_step", 0, "evaluate the policy from ckpt at this step"
@@ -313,6 +317,7 @@ def main(_):
     assert FLAGS.batch_size % num_devices == 0
     # seed
     rng = jax.random.PRNGKey(FLAGS.seed)
+    rng, sampling_rng = jax.random.split(rng)
 
     # create env and load dataset
     env = gym.make(
@@ -327,11 +332,26 @@ def main(_):
     env = Quat2EulerWrapper(env)
     env = SERLObsWrapper(env)
     env = ChunkingWrapper(env, obs_horizon=1, act_exec_horizon=None)
+    if FLAGS.actor and FLAGS.reward_classifier_ckpt_path is not None:
+        image_keys = [key for key in env.observation_space.keys() if key != "state"]
+        # initialize the classifier, if specified, and wrap the env
+        from serl_launcher.networks.reward_classifier import load_classifier_func
+
+        # if FLAGS.reward_classifier_ckpt_path is None:
+        #     raise ValueError("reward_classifier_ckpt_path must be specified for actor")
+
+        reward_func = load_classifier_func(
+            key=sampling_rng,
+            sample=env.observation_space.sample(),
+            image_keys=image_keys,
+            checkpoint_path=FLAGS.reward_classifier_ckpt_path,
+            step=100,
+        )
+        env = BinaryRewardClassifierWrapper(env, reward_func)
     env = RecordEpisodeStatistics(env)
 
     image_keys = [key for key in env.observation_space.keys() if key != "state"]
 
-    rng, sampling_rng = jax.random.split(rng)
     agent: DrQAgent = make_drq_agent(
         seed=FLAGS.seed,
         sample_obs=env.observation_space.sample(),
