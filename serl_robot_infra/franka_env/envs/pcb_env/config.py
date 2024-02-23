@@ -31,7 +31,7 @@ class PCBEnvConfig(DefaultEnvConfig):
     RESET_POSE = TARGET_POSE + np.array([0.0, 0.0, 0.04, 0.0, 0.0, 0.0])
     REWARD_THRESHOLD = [0.003, 0.003, 0.001, 0.1, 0.1, 0.1]
     ACTION_SCALE = (0.02, 0.2, 1)
-    RANDOM_RESET = True
+    RANDOM_RESET = False
     RANDOM_XY_RANGE = 0.05
     RANDOM_RZ_RANGE = np.pi / 9
     ABS_POSE_LIMIT_LOW = np.array(

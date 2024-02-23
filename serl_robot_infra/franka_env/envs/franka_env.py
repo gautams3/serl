@@ -222,6 +222,7 @@ class FrankaEnv(gym.Env):
         current_pose = np.hstack([current_pose[:3], euler_angles])
         delta = np.abs(current_pose - self._TARGET_POSE)
         if np.all(delta < self._REWARD_THRESHOLD):
+            print(f'\tPose goal reached')
             return True
         else:
             # print(f'Goal not reached, the difference is {delta}, the desired threshold is {self._REWARD_THRESHOLD}')
