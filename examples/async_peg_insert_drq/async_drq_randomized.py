@@ -113,7 +113,8 @@ def actor(agent: DrQAgent, data_store, env, sampling_rng):
             obs, _ = env.reset()
             done = False
             start_time = time.time()
-            while not done:
+            # while not done:
+            while True:  # HACK for continuous evaluation
                 actions = agent.sample_actions(
                     observations=jax.device_put(obs),
                     argmax=True,

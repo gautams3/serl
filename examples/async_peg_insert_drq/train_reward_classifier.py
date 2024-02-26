@@ -30,13 +30,15 @@ FLAGS = flags.FLAGS
 flags.DEFINE_boolean("debug", True, "Debug disables wandb logging")
 flags.DEFINE_string("exp_name", None, "Name of the experiment for wandb logging.")
 flags.DEFINE_string("env", "FrankaPegInsert-Vision-v0", "Name of environment.")
+flags.DEFINE_integer("seed", 0, "Random seed.")
+flags.DEFINE_string("data_file", "peg_insert_5_demos_2024-02-23_11-15-06.pkl.pkl", "Path to data file.")
 
 def main(_):
     num_epochs = 100
     batch_size = 256
 
     # seed
-    rng = jax.random.PRNGKey(FLAGS.seed)
+    rng = jax.random.PRNGKey(0)
     rng, sampling_rng = jax.random.split(rng)
 
     devices = jax.local_devices()
@@ -57,17 +59,12 @@ def main(_):
     env = ChunkingWrapper(env, obs_horizon=1, act_exec_horizon=None)
     image_keys = [k for k in env.observation_space.keys() if "state" not in k]
 
-    success_data = pkl.load(
-        open("peg_insert_40_demos_twograsps_2024-02-09_17-40-00.pkl", "rb")
-    )
     pos_buffer = MemoryEfficientReplayBufferDataStore(
         env.observation_space,
         env.action_space,
         capacity=5000,
         image_keys=image_keys,
     )
-    for traj in success_data:
-        pos_buffer.insert(traj)
 
     neg_buffer = MemoryEfficientReplayBufferDataStore(
         env.observation_space,
@@ -80,34 +77,32 @@ def main(_):
         """Helper function to add data to buffer"""
         demos = pkl.load(open(demos_path, "rb"))
         # add failed data to negative buffer
-        failed_data = [d for d in demos if not d["dones"]]
+        failed_data = [d for d in demos if not d["rewards"]]
         for traj in failed_data:
             neg_buffer.insert(traj)
 
         # add success data to positive buffer
         if not neg_only:
-            success_data = [d for d in demos if d["dones"]]
+            success_data = [d for d in demos if d["rewards"]]
             for traj in success_data:
                 pos_buffer.insert(traj)
 
-    # add_data_to_buffer("cable_route_10_demos_2024-01-03_22-22-56.pkl")
-    # add_data_to_buffer("cable_route_10_demos_2024-01-03_22-25-50.pkl")
-    # add_data_to_buffer("cable_route_20_demos_2024-01-04_12-10-54.pkl")
+    add_data_to_buffer(FLAGS.data_file)
     # add_data_to_buffer("cable_route_20_failed_2024-01-04_12-50-24.pkl", neg_only=True)
-    add_data_to_buffer("peg_insert_20_faileddemos_2024-02-22_10-39-01.pkl", neg_only=True)
 
     print(f"failed buffer size: {len(neg_buffer)}")
     print(f"success buffer size: {len(pos_buffer)}")
+    pos_fraction = 0.5  # for re-balancing the dataset
     pos_iterator = pos_buffer.get_iterator(
         sample_args={
-            "batch_size": batch_size // 2,
+            "batch_size": int(batch_size * pos_fraction),
             "pack_obs_and_next_obs": False,
         },
         device=sharding.replicate(),
     )
     neg_iterator = neg_buffer.get_iterator(
         sample_args={
-            "batch_size": batch_size // 2,
+            "batch_size": int(batch_size * (1 - pos_fraction)),
             "pack_obs_and_next_obs": False,
         },
         device=sharding.replicate(),
@@ -120,7 +115,6 @@ def main(_):
     sample = concat_batches(pos_sample, neg_sample, axis=0)
 
     rng, key = jax.random.split(rng)
-    # import ipdb; ipdb.set_trace()
     classifier = create_classifier(key, sample["next_observations"], image_keys)
 
     def data_augmentation_fn(rng, observations):
@@ -159,12 +153,12 @@ def main(_):
         neg_sample = next(neg_iterator)
         # Merge and create labels
         sample = concat_batches(
-            pos_sample["next_observations"], neg_sample["observations"], axis=0
-        )
+            pos_sample["observations"], neg_sample["observations"], axis=0
+        )   
         rng, key = jax.random.split(rng)
         sample = data_augmentation_fn(key, sample)
         labels = jnp.concatenate(
-            [jnp.ones((batch_size // 2, 1)), jnp.zeros((batch_size // 2, 1))], axis=0
+            [jnp.ones((int(batch_size * pos_fraction), 1)), jnp.zeros((int(batch_size * (1 - pos_fraction)), 1))], axis=0
         )
         batch = {"data": sample, "labels": labels}
 

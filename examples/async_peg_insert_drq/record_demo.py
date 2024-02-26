@@ -66,7 +66,8 @@ if __name__ == "__main__":
 
         obs = next_obs
 
-        if done:
+        # if done:
+        if env.curr_path_length >= env.max_episode_length:  # only reset if max length reached. records many more success transitions
             success_count += rew
             total_count += 1
             print(
