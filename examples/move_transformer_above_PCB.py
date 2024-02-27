@@ -105,4 +105,7 @@ input('Press enter to continue')
 
 # print('Now start the other controller and press enter')
 
+requests.post(SERVER_URL + "update_param", json=PCBEnvConfig.PRECISION_PARAM)
+time.sleep(0.5)
+
 print('Done!')

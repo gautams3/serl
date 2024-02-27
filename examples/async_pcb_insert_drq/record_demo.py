@@ -32,7 +32,7 @@ if __name__ == "__main__":
 
     transitions = []
     success_count = 0
-    success_needed = 20
+    success_needed = 5
     total_count = 0
     pbar = tqdm(total=success_needed)
 
@@ -66,7 +66,8 @@ if __name__ == "__main__":
 
         obs = next_obs
 
-        if done:
+        # if done:
+        if env.curr_path_length >= env.max_episode_length:  # only reset if max length reached. records many more success transitions
             success_count += rew
             total_count += 1
             print(
@@ -81,3 +82,4 @@ if __name__ == "__main__":
 
     env.close()
     pbar.close()
+    print("Done!")
