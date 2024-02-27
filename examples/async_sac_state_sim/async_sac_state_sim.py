@@ -17,8 +17,8 @@ from serl_launcher.utils.launcher import (
     make_sac_agent,
     make_trainer_config,
     make_wandb_logger,
+    make_replay_buffer,
 )
-from serl_launcher.data.data_store import ReplayBufferDataStore
 
 from gymnasium.wrappers.record_episode_statistics import RecordEpisodeStatistics
 from serl_launcher.agents.continuous.sac import SACAgent
@@ -61,6 +61,9 @@ flags.DEFINE_boolean(
     "debug", False, "Debug mode."
 )  # debug mode will disable wandb logging
 
+flags.DEFINE_string("log_rlds_path", None, "Path to save RLDS logs.")
+flags.DEFINE_string("preload_rlds_path", None, "Path to preload RLDS data.")
+
 
 def print_green(x):
     return print("\033[92m {}\033[00m".format(x))
@@ -69,10 +72,9 @@ def print_green(x):
 ##############################################################################
 
 
-def actor(agent: SACAgent, data_store, env, sampling_rng, tunnel=None):
+def actor(agent: SACAgent, data_store, env, sampling_rng):
     """
     This is the actor loop, which runs when "--actor" is set to True.
-    NOTE: tunnel is used the transport layer for multi-threading
     """
     client = TrainerClient(
         "actor_env",
@@ -131,7 +133,7 @@ def actor(agent: SACAgent, data_store, env, sampling_rng, tunnel=None):
                     next_observations=next_obs,
                     rewards=reward,
                     masks=1.0 - done,
-                    dones=done,
+                    dones=done or truncated,
                 )
             )
 
@@ -166,12 +168,9 @@ def actor(agent: SACAgent, data_store, env, sampling_rng, tunnel=None):
 ##############################################################################
 
 
-def learner(
-    rng, agent: SACAgent, replay_buffer, replay_iterator, wandb_logger=None, tunnel=None
-):
+def learner(rng, agent: SACAgent, replay_buffer, replay_iterator, wandb_logger=None):
     """
     The learner loop, which runs when "--learner" is set to True.
-    NOTE: tunnel is used the transport layer for multi-threading
     """
     # To track the step in the training loop
     update_steps = 0
@@ -268,10 +267,12 @@ def main(_):
     )
 
     def create_replay_buffer_and_wandb_logger():
-        replay_buffer = ReplayBufferDataStore(
-            env.observation_space,
-            env.action_space,
+        replay_buffer = make_replay_buffer(
+            env,
             capacity=FLAGS.replay_buffer_capacity,
+            rlds_logger_path=FLAGS.log_rlds_path,
+            type="replay_buffer",
+            preload_rlds_path=FLAGS.preload_rlds_path,
         )
 
         # set up wandb and logging
@@ -299,7 +300,6 @@ def main(_):
             replay_buffer,
             replay_iterator=replay_iterator,
             wandb_logger=wandb_logger,
-            tunnel=None,
         )
 
     elif FLAGS.actor:
@@ -308,7 +308,7 @@ def main(_):
 
         # actor loop
         print_green("starting actor loop")
-        actor(agent, data_store, env, sampling_rng, tunnel=None)
+        actor(agent, data_store, env, sampling_rng)
 
     else:
         raise NotImplementedError("Must be either a learner or an actor")

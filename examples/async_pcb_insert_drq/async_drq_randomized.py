@@ -117,10 +117,9 @@ listener.start()
 ##############################################################################
 
 
-def actor(agent: DrQAgent, data_store, env, sampling_rng, tunnel=None):
+def actor(agent: DrQAgent, data_store, env, sampling_rng):
     """
     This is the actor loop, which runs when "--actor" is set to True.
-    NOTE: tunnel is used the transport layer for multi-threading
     """
     if FLAGS.eval_checkpoint_step:
         success_counter = 0
@@ -258,12 +257,9 @@ def actor(agent: DrQAgent, data_store, env, sampling_rng, tunnel=None):
 ##############################################################################
 
 
-def learner(
-    rng, agent: DrQAgent, replay_buffer, demo_buffer, wandb_logger=None, tunnel=None
-):
+def learner(rng, agent: DrQAgent, replay_buffer, demo_buffer, wandb_logger=None):
     """
     The learner loop, which runs when "--learner" is set to True.
-    NOTE: tunnel is used the transport layer for multi-threading
     """
     # To track the step in the training loop
     update_steps = 0
@@ -330,17 +326,16 @@ def learner(
                 agent, critics_info = agent.update_critics(
                     batch,
                 )
-                agent = jax.block_until_ready(agent)
 
         with timer.context("train"):
             batch = next(replay_iterator)
             demo_batch = next(demo_iterator)
             batch = concat_batches(batch, demo_batch, axis=0)
             agent, update_info = agent.update_high_utd(batch, utd_ratio=1)
-            agent = jax.block_until_ready(agent)
 
         # publish the updated network
         if step > 0 and step % (FLAGS.steps_per_update) == 0:
+            agent = jax.block_until_ready(agent)
             server.publish_network(agent.state.params)
 
         if update_steps % FLAGS.log_period == 0 and wandb_logger:
@@ -458,7 +453,6 @@ def main(_):
             replay_buffer,
             demo_buffer=demo_buffer,
             wandb_logger=wandb_logger,
-            tunnel=None,
         )
 
     elif FLAGS.actor:
@@ -467,7 +461,7 @@ def main(_):
 
         # actor loop
         print_green("starting actor loop")
-        actor(agent, data_store, env, sampling_rng, tunnel=None)
+        actor(agent, data_store, env, sampling_rng)
 
     else:
         raise NotImplementedError("Must be either a learner or an actor")
