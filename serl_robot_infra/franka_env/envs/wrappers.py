@@ -90,7 +90,9 @@ class BinaryRewardClassifierWrapper(gym.Wrapper):
         if self.reward_classifier_func is not None:
             logit = self.reward_classifier_func(obs).item()
             rew = (sigmoid(logit) >= 0.5) * 1
-            print(f"Classifier: {rew}. logits: {logit}")
+            # print(f"Classifier: {rew}. logits: {logit}")
+            if rew:
+                print("Classifier: SUCCESS!")
             return rew 
         return 0
 
@@ -209,9 +211,6 @@ class SpacemouseIntervention(gym.ActionWrapper):
         return action
 
     def step(self, action):
-        # HACK: Disable checkpoint actions. Always intervene for eval of classifier
-        action = action * 0
-
         new_action = self.action(action)
         obs, rew, done, truncated, info = self.env.step(new_action)
         info["intervene_action"] = new_action

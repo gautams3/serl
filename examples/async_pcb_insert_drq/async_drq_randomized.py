@@ -412,6 +412,8 @@ def main(_):
     env = SERLObsWrapper(env)
     env = ChunkingWrapper(env, obs_horizon=1, act_exec_horizon=None)
     if FLAGS.actor and FLAGS.reward_classifier_ckpt_path is not None:
+        print(f'Using reward classifier from {FLAGS.reward_classifier_ckpt_path}')
+
         image_keys = [key for key in env.observation_space.keys() if key != "state"]
         # initialize the classifier, if specified, and wrap the env
         from serl_launcher.networks.reward_classifier import load_classifier_func
