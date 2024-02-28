@@ -24,8 +24,8 @@ from serl_launcher.utils.launcher import (
     make_drq_agent,
     make_trainer_config,
     make_wandb_logger,
+    make_replay_buffer,
 )
-from serl_launcher.data.data_store import MemoryEfficientReplayBufferDataStore
 from serl_launcher.wrappers.serl_obs_wrappers import SERLObsWrapper
 
 import franka_sim
@@ -65,6 +65,9 @@ flags.DEFINE_string("checkpoint_path", None, "Path to save checkpoints.")
 flags.DEFINE_boolean(
     "debug", False, "Debug mode."
 )  # debug mode will disable wandb logging
+
+flags.DEFINE_string("log_rlds_path", None, "Path to save RLDS logs.")
+flags.DEFINE_string("preload_rlds_path", None, "Path to preload RLDS data.")
 
 devices = jax.local_devices()
 num_devices = len(devices)
@@ -138,7 +141,7 @@ def actor(agent: DrQAgent, data_store, env, sampling_rng):
                 next_observations=next_obs,
                 rewards=reward,
                 masks=1.0 - done,
-                dones=done,
+                dones=done or truncated,
             )
             data_store.insert(transition)
 
@@ -229,15 +232,14 @@ def learner(rng, agent: DrQAgent, replay_buffer, wandb_logger=None):
                 agent, critics_info = agent.update_critics(
                     batch,
                 )
-                agent = jax.block_until_ready(agent)
 
         with timer.context("train"):
             batch = next(replay_iterator)
             agent, update_info = agent.update_high_utd(batch, utd_ratio=1)
-            agent = jax.block_until_ready(agent)
 
         # publish the updated network
         if step > 0 and step % (FLAGS.steps_per_update) == 0:
+            agent = jax.block_until_ready(agent)
             server.publish_network(agent.state.params)
 
         if update_steps % FLAGS.log_period == 0 and wandb_logger:
@@ -291,17 +293,20 @@ def main(_):
     )
 
     def create_replay_buffer_and_wandb_logger():
-        replay_buffer = MemoryEfficientReplayBufferDataStore(
-            env.observation_space,
-            env.action_space,
+        replay_buffer = make_replay_buffer(
+            env,
             capacity=FLAGS.replay_buffer_capacity,
+            rlds_logger_path=FLAGS.log_rlds_path,
+            type="memory_efficient_replay_buffer",
             image_keys=image_keys,
+            preload_rlds_path=FLAGS.preload_rlds_path,
         )
+
         # set up wandb and logging
         wandb_logger = make_wandb_logger(
             project="serl_dev",
             description=FLAGS.exp_name or FLAGS.env,
-            # debug=FLAGS.debug,
+            debug=FLAGS.debug,
         )
         return replay_buffer, wandb_logger
 

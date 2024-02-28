@@ -1,7 +1,16 @@
 export XLA_PYTHON_CLIENT_PREALLOCATE=false
 export XLA_PYTHON_CLIENT_MEM_FRACTION=.2
 
-DEMOFILE=pcb_insert_40_demos_twograsps_2024-02-09_17-40-00.pkl
+if [ -z "$1" ]
+then
+    echo "No argument supplied"
+    echo "Usage: ./run_learner.sh <demofile>"
+    echo "Example: ./run_learner.sh /home/gautamsalhotra/serl/examples/async_pcb_insert_drq/pcb_insert_40_demos_twograsps_2024-02-09_17-40-00.pkl"
+    exit 1
+fi
+DEMOFILE=$1
+echo "Demo file: $DEMOFILE"
+
 now=$(date +%m.%d.%H.%M)
 
 python async_drq_randomized.py "$@" \

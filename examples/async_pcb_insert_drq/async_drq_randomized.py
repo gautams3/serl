@@ -94,9 +94,9 @@ sharding = jax.sharding.PositionalSharding(devices)
 def print_green(x):
     return print("\033[92m {}\033[00m".format(x))
 
-SHOULD_PAUSE = False
+SHOULD_PAUSE = False  # flag to pause actor/learner agents
 def pause_client(a,b):
-    """ Set flag to pause actor/learner client at next iteration """
+    """ Set flag to pause actor/learner agents at next iteration """
     global SHOULD_PAUSE
     SHOULD_PAUSE = True
     print('Requested pause training')
@@ -125,6 +125,8 @@ def actor(agent: DrQAgent, data_store, env, sampling_rng):
     """
     This is the actor loop, which runs when "--actor" is set to True.
     """
+    global SHOULD_PAUSE
+
     if FLAGS.eval_checkpoint_step:
         success_counter = 0
         time_list = []
@@ -161,6 +163,16 @@ def actor(agent: DrQAgent, data_store, env, sampling_rng):
                     print(reward)
                     print(f"{success_counter}/{episode + 1}")
 
+            if SHOULD_PAUSE is True:
+                SHOULD_PAUSE = False # reset flag
+                print("Actor eval loop interrupted")
+                response = input("Do you want to continue (c), or exit (e)? ")
+                if response == "c":
+                    print("Continuing")
+                else:
+                    print("Stopping actor eval")
+                    break
+
         print(f"success rate: {success_counter / FLAGS.eval_n_trajs}")
         print(f"average time: {np.mean(time_list)}")
         return  # after done eval, return and exit
@@ -182,7 +194,6 @@ def actor(agent: DrQAgent, data_store, env, sampling_rng):
 
     obs, _ = env.reset()
     done = False
-    global SHOULD_PAUSE
 
     # training loop
     timer = Timer()
@@ -242,8 +253,8 @@ def actor(agent: DrQAgent, data_store, env, sampling_rng):
             client.request("send-stats", stats)
 
         if SHOULD_PAUSE is True:
-            SHOULD_PAUSE = False
-            print("Actor loop interrupted.")
+            SHOULD_PAUSE = False # reset flag
+            print("Actor loop interrupted")
             response = input("Do you want to continue (c), save replay buffer and exit (s) or simply exit (e)? ")
             if response == "c":
                 print("Continuing")
@@ -331,17 +342,16 @@ def learner(rng, agent: DrQAgent, replay_buffer, demo_buffer, wandb_logger=None)
                 agent, critics_info = agent.update_critics(
                     batch,
                 )
-                agent = jax.block_until_ready(agent)
 
         with timer.context("train"):
             batch = next(replay_iterator)
             demo_batch = next(demo_iterator)
             batch = concat_batches(batch, demo_batch, axis=0)
             agent, update_info = agent.update_high_utd(batch, utd_ratio=1)
-            agent = jax.block_until_ready(agent)
 
         # publish the updated network
         if step > 0 and step % (FLAGS.steps_per_update) == 0:
+            agent = jax.block_until_ready(agent)
             server.publish_network(agent.state.params)
 
         if update_steps % FLAGS.log_period == 0 and wandb_logger:
@@ -357,8 +367,8 @@ def learner(rng, agent: DrQAgent, replay_buffer, demo_buffer, wandb_logger=None)
         update_steps += 1
 
         if SHOULD_PAUSE is True:
-            SHOULD_PAUSE = False
-            print("Learner loop interrupted.")
+            SHOULD_PAUSE = False # reset flag
+            print("Learner loop interrupted")
             response = input("Do you want to continue (c), save training state and exit (s) or simply exit (e)? ")
             if response == "c":
                 print("Continuing")
