@@ -36,7 +36,7 @@ if __name__ == "__main__":
     total_count = 0
     pbar = tqdm(total=success_needed)
 
-    uuid = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    uuid = datetime.datetime.now().strftime("%m.%d.%H.%M")
     file_name = f"pcb_insert_{success_needed}_demos_{uuid}.pkl"
     file_dir = os.path.dirname(os.path.realpath(__file__))  # same dir as this script
     file_path = os.path.join(file_dir, file_name)
@@ -81,3 +81,4 @@ if __name__ == "__main__":
 
     env.close()
     pbar.close()
+    print("Done.")
