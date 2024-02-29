@@ -62,6 +62,7 @@ flags.DEFINE_integer("steps_per_update", 10, "Number of steps per update the ser
 
 flags.DEFINE_integer("log_period", 10, "Logging period.")
 flags.DEFINE_integer("eval_period", 2000, "Evaluation period.")
+flags.DEFINE_boolean("infinite_eval_episode", False, "Enable for cases where episodic return is not needed (e.g. testing vision components).")
 
 # flag to indicate if this is a leaner or a actor
 flags.DEFINE_boolean("learner", False, "Is this a learner or a trainer.")
@@ -142,8 +143,19 @@ def actor(agent: DrQAgent, data_store, env, sampling_rng):
             obs, _ = env.reset()
             done = False
             start_time = time.time()
-            # while not done:  # TODO: Make this configurable with flags.continous_eval
-            while True:  # HACK for continuous evaluation
+
+            if SHOULD_PAUSE is True:
+                SHOULD_PAUSE = False # reset flag
+                print(f"Actor eval loop interrupted at episode {episode}")
+                response = input("Do you want to continue (c), or exit (e)? ")
+                if response == "c":
+                    print("Continuing")
+                else:
+                    print("Stopping actor eval")
+                    break
+
+            stop_episode = False
+            while not stop_episode:
                 actions = agent.sample_actions(
                     observations=jax.device_put(obs),
                     argmax=True,
@@ -162,16 +174,11 @@ def actor(agent: DrQAgent, data_store, env, sampling_rng):
                     success_counter += reward
                     print(reward)
                     print(f"{success_counter}/{episode + 1}")
-
-            if SHOULD_PAUSE is True:
-                SHOULD_PAUSE = False # reset flag
-                print("Actor eval loop interrupted")
-                response = input("Do you want to continue (c), or exit (e)? ")
-                if response == "c":
-                    print("Continuing")
+                
+                if FLAGS.infinite_eval_episode:
+                    stop_episode = False
                 else:
-                    print("Stopping actor eval")
-                    break
+                    stop_episode = done
 
         print(f"success rate: {success_counter / FLAGS.eval_n_trajs}")
         print(f"average time: {np.mean(time_list)}")
@@ -254,7 +261,7 @@ def actor(agent: DrQAgent, data_store, env, sampling_rng):
 
         if SHOULD_PAUSE is True:
             SHOULD_PAUSE = False # reset flag
-            print("Actor loop interrupted")
+            print(f"Actor loop interrupted at actor step {step}")
             response = input("Do you want to continue (c), save replay buffer and exit (s) or simply exit (e)? ")
             if response == "c":
                 print("Continuing")
@@ -368,17 +375,18 @@ def learner(rng, agent: DrQAgent, replay_buffer, demo_buffer, wandb_logger=None)
 
         if SHOULD_PAUSE is True:
             SHOULD_PAUSE = False # reset flag
-            print("Learner loop interrupted")
+            print(f"Learner loop interrupted at step {update_steps}")
+            agent_ckpt = checkpoints.save_checkpoint(
+                        FLAGS.checkpoint_path, agent.state, step=update_steps, keep=100
+                    )
+            print(f"Saved agent checkpoint at {agent_ckpt}")
             response = input("Do you want to continue (c), save training state and exit (s) or simply exit (e)? ")
             if response == "c":
                 print("Continuing")
             else:
                 if response == "s":
-                    print("Saving learner state")
-                    agent_ckpt = checkpoints.save_checkpoint(
-                        FLAGS.checkpoint_path, agent.state, step=update_steps, keep=100
-                    )
-                    replay_buffer.save("replay_buffer_learner.npz")  # not yet supported for QueuedDataStore
+                    raise NotImplementedError("Saving learner state not yet supported")
+                    # replay_buffer.save("replay_buffer_learner.npz")  # not yet supported for QueuedDataStore
                     # TODO: save other parts of training state
                 else:
                     print("Training state not saved")

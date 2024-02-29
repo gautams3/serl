@@ -1,18 +1,28 @@
 export XLA_PYTHON_CLIENT_PREALLOCATE=false
 export XLA_PYTHON_CLIENT_MEM_FRACTION=.1
 
-DEMOFILE=/home/gautamsalhotra/serl/examples/async_pcb_insert_drq/pcb_insert_40_demos_2024-02-14_12-30-00.pkl
-now=$(date +%m.%d.%H.%M)
-# if [ -z "$1" ]
-# then
-#     echo "No argument supplied"
-#     echo "Usage: ./run_actor_classifier_eval.sh <classifier_ckpt_path>"
-#     echo "Example: ./run_actor_classifier_eval.sh /home/gautamsalhotra/serl/examples/async_pcb_insert_drq/classifier_ckpts_02.22.16.06"
-#     exit 1
-# fi
+if [ -z "$1" ]
+then
+    echo "No argument supplied"
+    echo "Usage: ./run_actor.sh <demofile>"
+    echo "Example: ./run_actor.sh /home/gautamsalhotra/serl/examples/async_pcb_insert_drq/pcb_insert_40_demos_twograsps_2024-02-09_17-40-00.pkl"
+    exit 1
+fi
+DEMOFILE=$1
+echo "Demo file: $DEMOFILE"
 
-# reward_classifier_ckpt_path=$1
-# echo "Classifier ckpt path: $reward_classifier_ckpt_path"
+# TODO: if $2 is classifier_ckpt_path, use it, else send None to the script
+# if [ -z "$2" ]
+# then
+#     echo "No classifier ckpt path supplied. Using None."
+#     reward_classifier_ckpt_path=None
+# else
+#     reward_classifier_ckpt_path=$2
+# fi
+reward_classifier_ckpt_path=/home/${USER}/serl/examples/async_pcb_insert_drq/classifier_ckpts_02.26.17.05
+echo "Classifier ckpt path: $reward_classifier_ckpt_path"
+
+checkpoint_path=/home/${USER}/serl/examples/async_pcb_insert_drq/pcb_insert_02.28.12.07
 
 python async_drq_randomized.py "$@" \
     --actor \
@@ -27,7 +37,7 @@ python async_drq_randomized.py "$@" \
     --eval_period 2000 \
     --encoder_type resnet-pretrained \
     --demo_path ${DEMOFILE} \
-    --checkpoint_path /home/gautamsalhotra/serl/examples/async_pcb_insert_drq/pcb_insert_02.14.16.30 \
-    --eval_checkpoint_step 6000 \
-    --eval_n_trajs 100
-    # --reward_classifier_ckpt_path ${reward_classifier_ckpt_path} \
+    --checkpoint_path ${checkpoint_path} \
+    --eval_checkpoint_step 5000 \
+    --eval_n_trajs 100 \
+    --reward_classifier_ckpt_path ${reward_classifier_ckpt_path} \
