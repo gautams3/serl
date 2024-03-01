@@ -437,6 +437,8 @@ def main(_):
             step=100,
         )
         env = BinaryRewardClassifierWrapper(env, reward_func)
+    else:
+        print("No reward classifier specified. Using environment reward.")
     env = RecordEpisodeStatistics(env)
 
     image_keys = [key for key in env.observation_space.keys() if key != "state"]

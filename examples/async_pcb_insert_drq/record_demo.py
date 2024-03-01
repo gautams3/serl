@@ -1,6 +1,7 @@
 import gymnasium as gym
 from tqdm import tqdm
 import numpy as np
+from absl import app, flags
 import copy
 import pickle as pkl
 import datetime
@@ -19,7 +20,12 @@ from serl_launcher.wrappers.serl_obs_wrappers import SERLObsWrapper
 
 from serl_launcher.wrappers.chunking import ChunkingWrapper
 
-if __name__ == "__main__":
+flags.DEFINE_boolean("no_truncate", False, "Whether to truncate the episode on done")
+flags.DEFINE_integer("success_needed", 20, "Number of successful demonstrations to record")
+FLAGS = flags.FLAGS
+
+def main(_):
+    """Record a set of demonstrations for the PCB insertion task."""
     env = gym.make("FrankaPCBInsert-Vision-v0", save_video=False)
     env = GripperCloseEnv(env)
     env = SpacemouseIntervention(env)
@@ -32,7 +38,7 @@ if __name__ == "__main__":
 
     transitions = []
     success_count = 0
-    success_needed = 20
+    success_needed = FLAGS.success_needed
     total_count = 0
     pbar = tqdm(total=success_needed)
 
@@ -66,8 +72,11 @@ if __name__ == "__main__":
 
         obs = next_obs
 
-        # if done:
-        if env.curr_path_length >= env.max_episode_length:  # only reset if max length reached. records many more success transitions
+        should_reset = done
+        if FLAGS.no_truncate:  # only reset if max length reached. records many more success transitions
+            should_reset = env.curr_path_length >= env.max_episode_length
+
+        if should_reset:
             success_count += rew
             total_count += 1
             print(
@@ -83,3 +92,6 @@ if __name__ == "__main__":
     env.close()
     pbar.close()
     print("Done.")
+
+if __name__ == "__main__":
+    app.run(main)
