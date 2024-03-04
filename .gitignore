@@ -175,3 +175,4 @@ wandb/
 
 # Files meant to be local (not pushed to github)
 local/
+*.jpeg

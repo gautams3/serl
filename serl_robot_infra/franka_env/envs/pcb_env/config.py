@@ -14,7 +14,7 @@ class PCBEnvConfig(DefaultEnvConfig):
         [
             0.63731742,
             -0.06401012,
-            0.073,
+            0.0715,  # 0.073 for standard pose from move to PCB script
             3.09726181,
             -0.00431366,
             0.00620241
@@ -29,7 +29,7 @@ class PCBEnvConfig(DefaultEnvConfig):
     RESET_POSE = TARGET_POSE + np.array([0.0, 0.0, 0.04, 0.0, 0.0, 0.0])
     REWARD_THRESHOLD: np.ndarray = np.array([0.003, 0.003, 0.001, 0.1, 0.1, 0.1])
     ACTION_SCALE = np.array([0.02, 0.2, 1])
-    RANDOM_RESET = False
+    RANDOM_RESET = True
     RANDOM_XY_RANGE = 0.05
     RANDOM_RZ_RANGE = np.pi / 9
     ABS_POSE_LIMIT_LOW = np.array(
@@ -64,7 +64,7 @@ class PCBEnvConfig(DefaultEnvConfig):
         "translational_clip_z": 0.002,
         "translational_clip_neg_x": 0.003,
         "translational_clip_neg_y": 0.002,
-        "translational_clip_neg_z": 0.003,
+        "translational_clip_neg_z": 0.001,
         "rotational_clip_x": 0.025,
         "rotational_clip_y": 0.01,
         "rotational_clip_z": 0.01,

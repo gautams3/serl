@@ -25,7 +25,7 @@ python async_drq_randomized.py "$@" \
     --utd_ratio 4 \
     --batch_size 256 \
     --eval_period 2000 \
-    --infinite_eval_episodes \
+    --infinite_eval_episode \
     --encoder_type resnet-pretrained \
     --demo_path ${DEMOFILE} \
     --reward_classifier_ckpt_path ${reward_classifier_ckpt_path} \

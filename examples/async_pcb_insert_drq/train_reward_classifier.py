@@ -38,7 +38,7 @@ def main(_):
     batch_size = 256
 
     # seed
-    rng = jax.random.PRNGKey(0)
+    rng = jax.random.PRNGKey(FLAGS.seed)
     rng, sampling_rng = jax.random.split(rng)
 
     devices = jax.local_devices()
