@@ -15,6 +15,7 @@ from typing import Dict
 from franka_env.camera.video_capture import VideoCapture
 from franka_env.camera.rs_capture import RSCapture
 from franka_env.utils.rotations import euler_2_quat, quat_2_euler
+import matplotlib.pyplot as plt
 
 
 class ImageDisplayer(threading.Thread):
@@ -100,6 +101,7 @@ class FrankaEnv(gym.Env):
         self.random_rz_range = config.RANDOM_RZ_RANGE
         self.hz = hz
         self.joint_reset_cycle = 200  # reset the robot joint every 200 cycles
+        self.tared_forces = []
 
         if save_video:
             print("Saving videos!")
@@ -221,7 +223,11 @@ class FrankaEnv(gym.Env):
         euler_angles = np.abs(euler_angles)
         current_pose = np.hstack([current_pose[:3], euler_angles])
         delta = np.abs(current_pose - self._TARGET_POSE)
-        print(f"Current xyz pose: {current_pose[:3]}")
+        print(f"Current xyz pose: {current_pose[:3]}. Z delta is {delta[2]}")
+        # get current force and tare it
+        tared_force = obs["state"]["tcp_force"] - self.force_tare
+        self.tared_forces.append(tared_force)
+        # print(f"Current force (tared): {tared_force}. Raw force: {obs['state']['tcp_force']}")
         # if delta[2] < self._REWARD_THRESHOLD[2]:  # z-axis threshold
         #     print('\tZ goal reached.')
         if np.all(delta < self._REWARD_THRESHOLD):
@@ -318,6 +324,25 @@ class FrankaEnv(gym.Env):
         if self.save_video:
             self.save_video_recording()
 
+        # # save all tared forces as an image
+        # if len(self.tared_forces):
+        #     now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        #     # make a matplotlib plot of x,y,z values fo tared force
+        #     fig, ax = plt.subplots()
+        #     ax.plot(self.tared_forces)
+        #     ax.set_title('Tared Forces')
+        #     ax.set_xlabel('Timestep')
+        #     ax.set_ylabel('Force (N?)')
+        #     plt.legend(['x', 'y', 'z'])
+        #     plt.tight_layout()
+        #     plt.savefig(f'./tared_forces_{now}.png')
+        #     plt.close()
+        #     print(f"Saved tared forces to ./tared_forces_{now}.png")
+        #     time.sleep(1)
+
+        # clear tared forces after saving previous one
+        self.tared_forces = []
+
         self.cycle_count += 1
         if self.cycle_count % self.joint_reset_cycle == 0:
             self.cycle_count = 0
@@ -329,6 +354,9 @@ class FrankaEnv(gym.Env):
 
         self._update_currpos()
         obs = self._get_obs()
+
+        # get current force and use it to tare future force readings
+        self.force_tare = obs["state"]["tcp_force"]
 
         return obs, {}
 
