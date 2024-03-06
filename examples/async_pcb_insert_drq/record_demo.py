@@ -1,5 +1,6 @@
 import gymnasium as gym
 from tqdm import tqdm
+import jax
 import numpy as np
 from absl import app, flags
 import copy
@@ -14,6 +15,7 @@ from franka_env.envs.wrappers import (
     GripperCloseEnv,
     SpacemouseIntervention,
     Quat2EulerWrapper,
+    BinaryRewardClassifierWrapper,
 )
 
 from serl_launcher.wrappers.serl_obs_wrappers import SERLObsWrapper
@@ -22,10 +24,18 @@ from serl_launcher.wrappers.chunking import ChunkingWrapper
 
 flags.DEFINE_boolean("no_truncate", False, "Whether to truncate the episode on done")
 flags.DEFINE_integer("success_needed", 20, "Number of successful demonstrations to record")
+flags.DEFINE_integer("seed", 0, "Random seed")
+flags.DEFINE_string(
+    "reward_classifier_ckpt_path", None, "Path to reward classifier ckpt."
+)
 FLAGS = flags.FLAGS
 
 def main(_):
     """Record a set of demonstrations for the PCB insertion task."""
+    # seed
+    rng = jax.random.PRNGKey(FLAGS.seed)
+    rng, sampling_rng = jax.random.split(rng)
+
     env = gym.make("FrankaPCBInsert-Vision-v0", save_video=False)
     env = GripperCloseEnv(env)
     env = SpacemouseIntervention(env)
@@ -33,6 +43,26 @@ def main(_):
     env = Quat2EulerWrapper(env)
     env = SERLObsWrapper(env)
     env = ChunkingWrapper(env, obs_horizon=1, act_exec_horizon=None)
+    if FLAGS.reward_classifier_ckpt_path is not None:
+        print(f'Using reward classifier from {FLAGS.reward_classifier_ckpt_path}')
+
+        image_keys = [key for key in env.observation_space.keys() if key != "state"]
+        # initialize the classifier, if specified, and wrap the env
+        from serl_launcher.networks.reward_classifier import load_classifier_func
+
+        # if FLAGS.reward_classifier_ckpt_path is None:
+        #     raise ValueError("reward_classifier_ckpt_path must be specified for actor")
+
+        reward_func = load_classifier_func(
+            key=sampling_rng,
+            sample=env.observation_space.sample(),
+            image_keys=image_keys,
+            checkpoint_path=FLAGS.reward_classifier_ckpt_path,
+            step=100,
+        )
+        env = BinaryRewardClassifierWrapper(env, reward_func)
+    else:
+        print("No reward classifier specified. Using environment reward.")
 
     obs, _ = env.reset()
 
